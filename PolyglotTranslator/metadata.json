@@ -1,0 +1,26 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "org.kde.plasma.polyglottranslator",
+    "Name": "Polyglot Translator",
+    "Description": "A modern KDE Plasma 6 widget that translates text using LibreTranslate, Google, DeepL and MyMemory APIs. Supports language auto-detect, history and dark/light themes.",
+    "Icon": "preferences-desktop-locale",
+    "Version": "1.0",
+    "Category": "Utilities",
+    "License": "GPLv3",
+    "PluginType": "Plasma/Applet",
+    "ServiceTypes": [
+      "Plasma/Applet"
+    ],
+    "Dependencies": [],
+    "EnabledByDefault": true,
+    "Authors": [
+      {
+        "Name": "Joanne Pergamali",
+        "Email": "joanneper@yahoo.com"
+      }
+    ]
+  },
+   "X-Plasma-API-Minimum-Version": "6.0",
+  "X-Plasma-MainScript": "ui/main.qml"
+}
