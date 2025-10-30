@@ -15,12 +15,8 @@ import json
 import os
 import sys
 from typing import Any
-
-try:
-    import requests
-except ImportError as exc:  # pragma: no cover
-    print(f"Error: requests module is required ({exc})", file=sys.stderr)
-    sys.exit(99)
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
 def parse_args() -> tuple[str, str, str]:
@@ -37,21 +33,33 @@ def parse_args() -> tuple[str, str, str]:
 def request_translation(text: str, target: str, source: str) -> str:
     url = os.getenv("LIBRETRANSLATE_URL", "https://libretranslate.de/translate")
     payload: dict[str, Any] = {"q": text, "source": source, "target": target}
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "User-Agent": "PolyglotTranslator/1.0",
+    }
 
+    req = Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
+
+    data: Any = None
     try:
-        response = requests.post(
-            url,
-            headers=headers,
-            data=json.dumps(payload),
-            timeout=20,
-        )
-        response.raise_for_status()
-    except requests.RequestException as exc:
-        print(f"Error: {exc}", file=sys.stderr)
+        with urlopen(req, timeout=20) as response:
+            try:
+                data = json.load(response)
+            except json.JSONDecodeError as exc:
+                print(f"Error: Failed to decode response ({exc}).", file=sys.stderr)
+                sys.exit(3)
+    except HTTPError as exc:
+        print(f"Error: HTTP {exc.code} {exc.reason}", file=sys.stderr)
+        sys.exit(2)
+    except URLError as exc:
+        print(f"Error: {exc.reason}", file=sys.stderr)
         sys.exit(2)
 
-    data = response.json()
+    if not data:
+        print("Error: Translation service returned no data.", file=sys.stderr)
+        sys.exit(3)
+
     translated = data.get("translatedText")
     if not translated:
         print("Error: Translation service returned no data.", file=sys.stderr)
