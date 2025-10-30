@@ -2,8 +2,8 @@ import QtQuick 6.5
 import QtQuick.Controls 6.5
 import QtQuick.Layouts 1.15
 import Qt.labs.settings 1.1
-import Qt.labs.platform 1.1 as Platform
-import org.kde.plasma.core 6.0 as PlasmaCore
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasma5support as Plasma5Support
 import org.kde.plasma.components 3.0 as PlasmaComponents3
 import org.kde.plasma.plasmoid 2.0
 
@@ -75,11 +75,38 @@ PlasmoidItem {
         ListElement { label: "Korean"; value: "ko" }
     }
 
-    Platform.Clipboard {
-        id: clipboard
+    QtObject {
+        id: clipboardHelper
+        property var clipboard: null
+
+        Component.onCompleted: {
+            try {
+                clipboard = Qt.createQmlObject(
+                    'import Qt.labs.platform 1.1; Clipboard { }',
+                    clipboardHelper,
+                    "ClipboardInstance"
+                );
+            } catch (error) {
+                clipboard = null;
+                console.warn("Platform Clipboard unavailable:", error);
+            }
+        }
+
+        function setText(value) {
+            if (clipboard) {
+                clipboard.text = value;
+                return true;
+            }
+            if (Qt.application && Qt.application.clipboard) {
+                Qt.application.clipboard.text = value;
+                return true;
+            }
+            console.warn("No clipboard backend available for copy operation.");
+            return false;
+        }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: executor
         engine: "executable"
         property var activeJobs: ({})
@@ -238,6 +265,16 @@ PlasmoidItem {
 
         const args = ["-no-auto", "-brief", ":" + (sourceLanguage || "auto") + ":" + targetLanguage, text];
         currentJobToken = executor.launch("trans", args, { type: "translate" });
+    }
+
+    function copyResultToClipboard() {
+        if (!outputArea.text || outputArea.text.length === 0) {
+            return;
+        }
+
+        if (!clipboardHelper.setText(outputArea.text)) {
+            statusMessage = "Unable to copy to clipboard.";
+        }
     }
 
     function persistSelections() {
@@ -411,7 +448,7 @@ PlasmoidItem {
                         enabled: outputArea.text.length > 0
                         font.family: "Noto Sans"
                         font.pointSize: 12
-                        onClicked: clipboard.text = outputArea.text
+                        onClicked: copyResultToClipboard()
                     }
                 }
 
